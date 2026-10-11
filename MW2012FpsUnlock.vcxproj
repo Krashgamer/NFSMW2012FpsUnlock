@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <ProjectGuid>{7A1E6B4C-2D3F-4E8A-9C5B-1F0D2E3A4B5C}</ProjectGuid>
+    <RootNamespace>MW2012FpsUnlock</RootNamespace>
+    <ProjectName>MW2012FpsUnlock</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <TargetExt>.asi</TargetExt>
+    <OutDir>$(MSBuildProjectDirectory)\build\$(Configuration)\</OutDir>
+    <IntDir>$(MSBuildProjectDirectory)\build\obj\$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>user32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="src\barrier.cpp" />
+    <ClCompile Include="src\blend\character.cpp" />
+    <ClCompile Include="src\blend\effects.cpp" />
+    <ClCompile Include="src\blend\frame.cpp" />
+    <ClCompile Include="src\blend\objects.cpp" />
+    <ClCompile Include="src\blend\pieces.cpp" />
+    <ClCompile Include="src\blend\player.cpp" />
+    <ClCompile Include="src\blend\readouts.cpp" />
+    <ClCompile Include="src\blend\saferead.cpp" />
+    <ClCompile Include="src\blend\view.cpp" />
+    <ClCompile Include="src\blend\wheels.cpp" />
+    <ClCompile Include="src\blend\xform.cpp" />
+    <ClCompile Include="src\config.cpp" />
+    <ClCompile Include="src\crashguard.cpp" />
+    <ClCompile Include="src\display.cpp" />
+    <ClCompile Include="src\dllmain.cpp" />
+    <ClCompile Include="src\framelatency.cpp" />
+    <ClCompile Include="src\gamestate.cpp" />
+    <ClCompile Include="src\streamsync.cpp" />
+    <ClCompile Include="src\guards.cpp" />
+    <ClCompile Include="src\log.cpp" />
+    <ClCompile Include="src\pacer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\barrier.h" />
+    <ClInclude Include="src\blend\character.h" />
+    <ClInclude Include="src\blend\frame.h" />
+    <ClInclude Include="src\blend\latch.h" />
+    <ClInclude Include="src\blend\objects.h" />
+    <ClInclude Include="src\blend\parts.h" />
+    <ClInclude Include="src\blend\player.h" />
+    <ClInclude Include="src\blend\readouts.h" />
+    <ClInclude Include="src\blend\saferead.h" />
+    <ClInclude Include="src\blend\view.h" />
+    <ClInclude Include="src\blend\xform.h" />
+    <ClInclude Include="src\clock.h" />
+    <ClInclude Include="src\config.h" />
+    <ClInclude Include="src\crashguard.h" />
+    <ClInclude Include="src\display.h" />
+    <ClInclude Include="src\framelatency.h" />
+    <ClInclude Include="src\gamestate.h" />
+    <ClInclude Include="src\streamsync.h" />
+    <ClInclude Include="src\guards.h" />
+    <ClInclude Include="src\log.h" />
+    <ClInclude Include="src\pacer.h" />
+    <ClInclude Include="src\patch.h" />
+    <ClInclude Include="src\version.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="src\version.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

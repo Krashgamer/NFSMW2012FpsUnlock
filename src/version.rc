@@ -1,0 +1,29 @@
+#include <winver.h>
+#include "version.h"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION     MW_VERSION_MAJOR, MW_VERSION_MINOR, MW_VERSION_PATCH, 0
+ PRODUCTVERSION  MW_VERSION_MAJOR, MW_VERSION_MINOR, MW_VERSION_PATCH, 0
+ FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+ FILEFLAGS       0
+ FILEOS          VOS_NT_WINDOWS32
+ FILETYPE        VFT_DLL
+ FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "FileDescription",  "Frame rate unlock for Need for Speed: Most Wanted (2012)"
+            VALUE "FileVersion",      MW_VERSION_STRING
+            VALUE "InternalName",     "MW2012FpsUnlock"
+            VALUE "OriginalFilename", "MW2012FpsUnlock.asi"
+            VALUE "ProductName",      "MW2012 FPS Unlock"
+            VALUE "ProductVersion",   MW_VERSION_STRING
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

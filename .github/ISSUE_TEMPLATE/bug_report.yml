@@ -1,0 +1,27 @@
+name: Bug report
+description: A crash, a freeze, or something that does not work.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you saw, and where in the game.
+    validations:
+      required: true
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: |
+        Drag `MW2012FpsUnlock.log` in here. It is in your game's `scripts` folder, or in `%TEMP%`.
+        Grab it right after the problem. If you already restarted the game, the log of the session before is `MW2012FpsUnlock.log.old` in the same folder.
+    validations:
+      required: true
+
+  - type: input
+    id: mods
+    attributes:
+      label: Other mods
+      placeholder: NFSMW2012HDEffects

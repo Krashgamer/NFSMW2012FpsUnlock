@@ -1,0 +1,51 @@
+name: Build
+
+# Every push and pull request builds the plugin and the release archive and
+# keeps them as a workflow artifact. Pushing a version tag (v1.2.3, matching
+# src/version.h) also publishes a GitHub release with the archive and the
+# PDB attached (workflow artifacts expire; the PDB matches crash reports in the
+# log to source lines for as long as the release exists).
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2025
+    permissions:
+      contents: write   # only used by the release step on tags
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: microsoft/setup-msbuild@v2
+
+      - name: Build (Release, Win32)
+        run: msbuild MW2012FpsUnlock.sln -m -nologo -p:Configuration=Release -p:Platform=Win32
+
+      - name: Package
+        id: package
+        shell: pwsh
+        run: |
+          $tag = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { '' }
+          ./tools/package.ps1 -ExpectTag $tag
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MW2012FpsUnlock-v${{ steps.package.outputs.version }}
+          path: |
+            ${{ steps.package.outputs.zip }}
+            build/Release/MW2012FpsUnlock.pdb
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create $env:GITHUB_REF_NAME "${{ steps.package.outputs.zip }}" `
+            build/Release/MW2012FpsUnlock.pdb `
+            --title "MW2012 FPS Unlock $env:GITHUB_REF_NAME" --generate-notes

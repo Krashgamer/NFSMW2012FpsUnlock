@@ -1,0 +1,17 @@
+name: Feature request
+description: Something else that should move smoothly, or an idea for the plugin.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What would you like?
+      description: For things that still move at 60 Hz, describe what it is and where in the game you see it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Anything else
+      description: Screenshots, videos, or how other mods handle it.

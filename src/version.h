@@ -1,0 +1,10 @@
+#pragma once
+
+#define MW_VERSION_MAJOR 1
+#define MW_VERSION_MINOR 0
+#define MW_VERSION_PATCH 0
+
+#define MW_STR2(x) #x
+#define MW_STR(x) MW_STR2(x)
+#define MW_VERSION_STRING \
+    MW_STR(MW_VERSION_MAJOR) "." MW_STR(MW_VERSION_MINOR) "." MW_STR(MW_VERSION_PATCH)
