@@ -19,9 +19,9 @@ jobs:
       contents: write   # only used by the release step on tags
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: microsoft/setup-msbuild@v2
+      - uses: microsoft/setup-msbuild@v3
 
       - name: Build (Release, Win32)
         run: msbuild MW2012FpsUnlock.sln -m -nologo -p:Configuration=Release -p:Platform=Win32
@@ -33,7 +33,7 @@ jobs:
           $tag = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { '' }
           ./tools/package.ps1 -ExpectTag $tag
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: MW2012FpsUnlock-v${{ steps.package.outputs.version }}
           path: |
