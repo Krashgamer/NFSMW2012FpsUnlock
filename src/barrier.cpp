@@ -13,6 +13,17 @@ constexpr uintptr_t kJobInvoker = 0xDA07A0;
 constexpr uint8_t kJobInvokerPrologue[5] = { 0x55, 0x8B, 0xEC, 0x51, 0x56 };
 //                                           push ebp; mov ebp,esp; push ecx; push esi
 
+// Jobs that are not counted, by their function (job+0x18), under the names
+// the game queues them with. Neither touches the render command arena, and
+// the game itself never waits for them at the end of a frame:
+//   "Decompression" (sub_EAFF20) inflates the bundles the streaming manager
+//     loads. One run takes 9 ms on average and up to 37 ms.
+//   "AudCorMixJob" (sub_D0B660) mixes audio, about 180 times a second.
+// Counted, they held the game thread for 8-30 ms at a time whenever the world
+// streamed in: nearly every frame over 12 ms while driving (about one a
+// second, in bursts of up to twelve).
+constexpr uint32_t kUncountedJobs[] = { 0xEAFF20, 0xD0B660 };
+
 // Jobs queued but not yet picked up. The counter above reads 0 while the
 // queue is full, so it cannot close the gap between submission and pickup on
 // its own. The engine keeps that count itself: sub_D9F640 (the queue pop)
@@ -37,14 +48,21 @@ bool InstallJobInvokerHook()
 {
     if (!patch::Matches(kJobInvoker, kJobInvokerPrologue, sizeof(kJobInvokerPrologue)))
         return false;
-    uint8_t* mem = patch::AllocCode(64);
+    uint8_t* mem = patch::AllocCode(96);
     if (!mem)
         return false;
 
-    // Wrapper: lock inc; call the original with its single stack argument;
-    // lock dec (flags and return value preserved); retn 4.
+    // Wrapper: an uncounted job goes straight to the original; otherwise
+    // lock inc; call the original with its single stack argument; lock dec
+    // (flags and return value preserved); retn 4.
     patch::Stub s{ mem };
-    const uintptr_t trampoline = reinterpret_cast<uintptr_t>(mem) + 40;
+    const uintptr_t trampoline = reinterpret_cast<uintptr_t>(mem) + 72;
+    for (const uint32_t fn : kUncountedJobs)
+    {
+        s.B(0x81); s.B(0x79); s.B(0x18); s.D32(fn);      // cmp dword ptr [ecx+18h], fn
+        s.B(0x0F); s.B(0x84);                            // je trampoline
+        s.D32(static_cast<uint32_t>(trampoline - (s.Here() + 4)));
+    }
     s.LockInc(&g_activeJobs);
     s.B(0x8B); s.B(0x44); s.B(0x24); s.B(0x04);          // mov eax, [esp+4]
     s.B(0x50);                                           // push eax
@@ -56,7 +74,7 @@ bool InstallJobInvokerHook()
     s.B(0xC2); s.B(0x04); s.B(0x00);                     // retn 4
 
     // Trampoline: the stolen prologue, then back into the function.
-    patch::Stub t{ mem + 40 };
+    patch::Stub t{ mem + 72 };
     t.Bytes(kJobInvokerPrologue, sizeof(kJobInvokerPrologue));
     t.Jmp(kJobInvoker + sizeof(kJobInvokerPrologue));
 

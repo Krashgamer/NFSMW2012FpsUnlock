@@ -51,14 +51,26 @@ const char* Result(bool ok) { return ok ? "ok" : "FAILED"; }
 DWORD WINAPI StatsThread(LPVOID)
 {
     long frames = FrameCount(), ticks = TickCount();
+    long steps = StreamStepCount(), stepsDue = StreamStepTickDueCount();
+    long early = EarlyTickCount(), earlyMicros = EarlyTickMicros();
     for (;;)
     {
         Sleep(60000);
         const long f = FrameCount(), t = TickCount();
-        LOG_VERBOSE("last 60 s: %.1f fps, %.1f ticks/s, %ld emulated faults total",
-                    (f - frames) / 60.0, (t - ticks) / 60.0, EmulatedFaultCount());
+        const long s = StreamStepCount(), sd = StreamStepTickDueCount();
+        const long e = EarlyTickCount(), em = EarlyTickMicros();
+        LOG_VERBOSE("last 60 s: %.1f fps, %.1f ticks/s, %.1f streaming steps/s (%.1f with "
+                    "the tick already due, longest gap %ld ms), %ld ticks issued early "
+                    "(by %.1f ms in total), %ld emulated faults total",
+                    (f - frames) / 60.0, (t - ticks) / 60.0, (s - steps) / 60.0,
+                    (sd - stepsDue) / 60.0, TakeLongestStreamGapMs(), e - early,
+                    (em - earlyMicros) / 1000.0, EmulatedFaultCount());
         frames = f;
         ticks = t;
+        steps = s;
+        stepsDue = sd;
+        early = e;
+        earlyMicros = em;
     }
 }
 

@@ -18,6 +18,23 @@ long TickCount();
 // Ticks issued for the current frame (0 = render-only frame).
 int LastTicks();
 
-// True when the next pacer call is certain to issue at least one tick (or the
-// clock is in a mode that issues none by time). Game thread.
-bool TickDueBeforeNextFrame();
+// Whether the next pacer call issues at least one tick, asked at the streaming
+// step's place in the frame (streamsync.cpp). Game thread, once every frame:
+// the call also times the rest of the frame.
+enum class TickForecast
+{
+    None,       // the next frame is a render-only frame
+    Due,        // a tick is already due (or the clock is in a mode that issues
+                // none by time)
+    Promised,   // not due yet, but it will be by the time the pacer runs: the
+                // rest of the frame (Present, vsync, a frame limiter) or the
+                // frame cap takes at least that long. The pacer keeps the
+                // promise - should the frame come round sooner, it issues
+                // the tick a moment early. It never waits for it.
+};
+TickForecast ForecastTick();
+
+// How often, and by how much in total, the pacer issued a promised tick
+// early.
+long EarlyTickCount();
+long EarlyTickMicros();

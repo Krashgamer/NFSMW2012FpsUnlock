@@ -15,13 +15,26 @@
 // freed and refilled by the loader. That is the freeze (thousands of caught
 // faults) and the crash in streaming-heavy places such as tunnels.
 //
-// So the step only runs on frames where a tick is already due: the pacer then
-// issues at least one tick for the next frame, and the original order -
-// stream, tick, draw - holds again, with no waiting. That is at most one step
-// per tick; a tick that falls due after the step's place in the frame has
-// none, so streaming runs at roughly 25-60 steps a second (about 28 at
-// 160 fps), the range the game was built for (30 fps consoles, 60 fps PC).
-// In states where the game issues no ticks (paused, special clock modes) and
-// on start and loading screens the step runs every frame, as it does without
-// the mod.
+// So the step only runs when the next frame starts with a tick, and the
+// original order - stream, tick, draw - holds again. That is the case when a
+// tick is already due at the step's place in the frame, or when it will be
+// due by the time the pacer runs: Present, vsync, a frame limiter and the
+// plugin's own frame cap all sit between the two (pacer.h, ForecastTick).
+// The second half matters whenever the frame rate is held near a multiple of
+// 60: every frame then reaches the step at the same point between two ticks,
+// and for minutes at a time that point lies before the tick falls due - with
+// only the first rule the world stopped loading (issue #2).
+//
+// That is at most one step per tick; a tick that falls due unforeseen has
+// none, so streaming runs at roughly 25-60 steps a second, the range the game
+// was built for (30 fps consoles, 60 fps PC). In states where the game issues
+// no ticks (paused, special clock modes) and on start and loading screens the
+// step runs every frame, as it does without the mod.
 bool InstallStreamSync();
+
+// Streaming steps run since startup, and how many of them had the tick
+// already due (or needed none).
+long StreamStepCount();
+long StreamStepTickDueCount();
+// The longest time between two steps since the last call, in ms.
+long TakeLongestStreamGapMs();

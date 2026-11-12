@@ -42,11 +42,24 @@ struct FrameClock
 };
 
 int64_t s_lastTickTime = 0;   // boundary of the last issued tick, 100 ns
-// The clock as the last pacer call saw it, for TickDueBeforeNextFrame.
+// The clock as the last pacer call saw it, for ForecastTick.
 bool    s_ticking = false;    // normal mode: ticks issued by wall-clock time
 int64_t s_period = 0;
 int     s_minTicks = 0;
 int64_t s_nextFrame = 0;      // frame cap deadline
+
+// ForecastTick: the frame's tail is the time from the streaming step's place
+// in the frame to the next pacer call. Present sits in it, and so does every
+// wait of vsync or of a frame limiter outside the plugin.
+constexpr int kTailSamples = 8;
+int64_t s_tailStart = 0;              // when ForecastTick ran this frame, 100 ns
+int64_t s_tails[kTailSamples] = {};   // the most recent tails
+int     s_tailCount = 0;
+int     s_tailNext = 0;
+bool    s_tickPromised = false;       // a streaming step ran on a forecast tick
+
+volatile LONG s_earlyTicks = 0;
+volatile LONG s_earlyTickMicros = 0;
 
 volatile LONG s_frames = 0;
 volatile LONG s_ticks = 0;
@@ -60,6 +73,46 @@ void EndOfFrame()
     EndFrameBackpressure();
     WaitRenderDrain();
     frame::Restore();
+}
+
+void WaitUntil(int64_t deadline)
+{
+    while (Now100ns() < deadline)
+    {
+        if (deadline - Now100ns() > 15000)   // more than 1.5 ms left: sleep
+            Sleep(1);
+    }
+}
+
+void NoteTail(int64_t now)
+{
+    if (s_tailStart == 0)
+        return;
+    s_tails[s_tailNext] = now - s_tailStart;
+    s_tailNext = (s_tailNext + 1) % kTailSamples;
+    if (s_tailCount < kTailSamples)
+        ++s_tailCount;
+    s_tailStart = 0;
+}
+
+// The shortest of the recent tails; 0 until there are enough of them.
+int64_t ShortestTail()
+{
+    if (s_tailCount < kTailSamples)
+        return 0;
+    int64_t shortest = s_tails[0];
+    for (int i = 1; i < kTailSamples; ++i)
+    {
+        if (s_tails[i] < shortest)
+            shortest = s_tails[i];
+    }
+    return shortest;
+}
+
+// The earliest time at which the pacer issues the next tick.
+int64_t NextTickTime(int64_t period, int minTicks)
+{
+    return s_lastTickTime + (period + minTicks - 1) / minTicks;
 }
 
 // Start and loading screens render in a fraction of a millisecond and would
@@ -86,7 +139,18 @@ void NoteLoadingScreen(LoadingScreen screen)
     if (was == now)
         return;    // includes a change of kind mid-load (an event load briefly unloads the world)
     const int64_t t = Now100ns();
+    // The map opens and closes all the time: verbose log only.
+    static bool s_quiet = false;
     if (now)
+        s_quiet = screen == LoadingScreen::NoWorld;
+    if (s_quiet)
+    {
+        if (now)
+            LOG_VERBOSE("full-screen screen (car switch, map): capped at %d fps", kLoadingFps);
+        else
+            LOG_VERBOSE("full-screen screen closed after %.1f s", (t - s_since) / 1.0e7);
+    }
+    else if (now)
         LOG_INFO("%s loading screen: capped at %d fps", LoadingScreenName(screen), kLoadingFps);
     else
         LOG_INFO("loading screen closed after %.1f s", (t - s_since) / 1.0e7);
@@ -121,6 +185,9 @@ void NoteFrameTime()
 int Pace(FrameClock* self, int minTicks, int maxTicks, int* outTicks)
 {
     const int64_t now = Now100ns();
+    NoteTail(now);
+    const bool tickPromised = s_tickPromised;
+    s_tickPromised = false;
 
     s_ticking = !self->noWait && minTicks > 0 && self->period > 0 && s_lastTickTime != 0;
     s_period = self->period;
@@ -158,11 +225,7 @@ int Pace(FrameClock* self, int minTicks, int maxTicks, int* outTicks)
         const int64_t framePeriod = 10000000i64 / cap;
         if (s_nextFrame == 0)
             s_nextFrame = now + framePeriod;
-        while (Now100ns() < s_nextFrame)
-        {
-            if (s_nextFrame - Now100ns() > 15000)   // more than 1.5 ms left: sleep
-                Sleep(1);
-        }
+        WaitUntil(s_nextFrame);
         s_nextFrame += framePeriod;
         if (s_nextFrame < Now100ns())              // fell behind: resync
             s_nextFrame = Now100ns() + framePeriod;
@@ -175,6 +238,20 @@ int Pace(FrameClock* self, int minTicks, int maxTicks, int* outTicks)
     // Ticks owed by wall-clock time. minTicks doubles as the speed multiplier
     // in fast-forward states (vanilla returns minTicks per 60 Hz frame there).
     int64_t due = (Now100ns() - s_lastTickTime) * minTicks / period;
+    if (due <= 0 && tickPromised)
+    {
+        // A streaming step ran at the end of the last frame because this call
+        // was forecast to issue a tick (ForecastTick), and the frame came
+        // round sooner than forecast. The tick has to precede the draw, so it
+        // is issued now, a moment early. Its place on the tick grid stays:
+        // the next one falls due a full period after that, and until the
+        // clock reaches it the blend shows the state before this tick.
+        InterlockedIncrement(&s_earlyTicks);
+        InterlockedExchangeAdd(
+            &s_earlyTickMicros,
+            static_cast<LONG>((NextTickTime(period, minTicks) - Now100ns()) / 10));
+        due = 1;
+    }
     if (due <= 0)
     {
         *outTicks = 0;               // render-only frame
@@ -256,9 +333,26 @@ long FrameCount() { return InterlockedCompareExchange(&s_frames, 0, 0); }
 long TickCount()  { return InterlockedCompareExchange(&s_ticks, 0, 0); }
 int  LastTicks()  { return InterlockedCompareExchange(&s_lastTicks, 0, 0); }
 
-bool TickDueBeforeNextFrame()
+long EarlyTickCount()  { return InterlockedCompareExchange(&s_earlyTicks, 0, 0); }
+long EarlyTickMicros() { return InterlockedCompareExchange(&s_earlyTickMicros, 0, 0); }
+
+TickForecast ForecastTick()
 {
+    const int64_t now = Now100ns();
+    s_tailStart = now;
     if (!s_ticking)
-        return true;   // the game issues no ticks by time right now: nothing to wait for
-    return (Now100ns() - s_lastTickTime) * s_minTicks >= s_period;
+        return TickForecast::Due;   // the game issues no ticks by time right now
+    const int64_t tickAt = NextTickTime(s_period, s_minTicks);
+    if (now >= tickAt)
+        return TickForecast::Due;
+
+    // Not due yet, but the next pacer call is still a tail away, and with a
+    // frame cap it computes the ticks no earlier than the cap's deadline.
+    int64_t paceAt = now + ShortestTail();
+    if (FrameCap() > 0 && s_nextFrame > paceAt)
+        paceAt = s_nextFrame;
+    if (paceAt < tickAt)
+        return TickForecast::None;
+    s_tickPromised = true;
+    return TickForecast::Promised;
 }

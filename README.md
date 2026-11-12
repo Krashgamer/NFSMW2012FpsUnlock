@@ -2,8 +2,7 @@
 
 An ASI plugin for **Need for Speed: Most Wanted (2012)** (PC, `NFS13.exe`
 v1.5) that removes the 60 FPS cap, makes the game actually move at the higher
-frame rate, and adds a **borderless window mode** so your monitor keeps its
-full refresh rate.
+frame rate, and adds a **borderless window mode**.
 
 The simulation keeps running at its fixed 60 Hz, so game speed, physics, AI
 and timers are exactly as shipped. Only rendering is unlocked, and every
@@ -15,13 +14,11 @@ modified.
 - **Unlocks the frame rate.** The game busy-waits for its 60 Hz simulation
   tick before every frame; the plugin replaces that wait with one that hands
   each frame only the ticks owed by real time.
-- **Adds a borderless window mode.** In fullscreen the game always switches
-  the monitor to 60 Hz, which alone caps what you can see at 60 frames per
-  second. By default the plugin runs the game in a borderless window covering
-  the screen instead: the monitor keeps the refresh rate Windows uses,
-  Alt+Tab is instant, and the screen never goes black when switching. The
-  game's own exclusive fullscreen is still available and then uses your
-  desktop's refresh rate instead of 60 Hz.
+- **Adds a borderless window mode.** By default the plugin runs the game in a borderless
+  window covering the screen, and the screen never goes black when switching
+  between monitors. The game's own exclusive fullscreen is still available
+  (`Borderless=0` in `MW2012FpsUnlock.ini`) and then uses your desktop's
+  refresh rate instead of 60 Hz.
 - **Interpolates motion.** With the simulation at 60 Hz, extra frames would
   just redraw the same world. The plugin keeps the last two simulation states
   of everything the renderer reads per tick and draws the blend between them,
@@ -116,7 +113,7 @@ mod installed a different `dinput8.dll`, you can keep it as long as
 | key | default | |
 |---|---|---|
 | `TargetFPS` | `0` | Frame cap, in any display mode. `0` = no cap, otherwise the maximum frames rendered per second (min. 30). |
-| `LoadingScreenCap` | `1` | `1` = start and loading screens run at 60 fps instead of thousands, `0` = uncapped. |
+| `LoadingScreenCap` | `1` | `1` = start screen, loading screens and the map run at 60 fps instead of thousands, `0` = uncapped. |
 | `Borderless` | `1` | `1` = borderless window covering the screen, `0` = the game's exclusive fullscreen. |
 | `RefreshRate` | `0` | Monitor refresh rate in exclusive fullscreen. `0` = the same as your Windows desktop, otherwise the closest rate your monitor supports. In borderless mode the monitor runs at your Windows setting. |
 | `VsyncInterval` | `-1` | Vsync. `-1` = the game's own setting, `0` off, `1` on. |
@@ -154,6 +151,8 @@ log.
   happens inside the NVIDIA D3D11 driver on one of its own threads.
 - In very long uncapped sessions (hours) memory use grows slowly inside the
   graphics driver. A `TargetFPS` below your uncapped frame rate keeps it flat.
+- After switching to a car that is far away, the loading screen can run
+  uncapped for under a second before the game appears.
 - If the game closes right at startup after installing, check that
   `scripts\global.ini` exists and contains `DontLoadFromDllMain=0` (see
   *Manual install*).
@@ -197,7 +196,7 @@ and `MW2012FpsUnlock.pdb` attached.
 | `src/framelatency.cpp` | DXGI render-ahead limit |
 | `src/streamsync.cpp` | world streaming in step with the simulation ticks |
 | `src/display.cpp` | borderless window, exclusive fullscreen refresh rate |
-| `src/gamestate.cpp` | reads the game's loading state (for `LoadingScreenCap`) |
+| `src/gamestate.cpp` | reads which screen without gameplay is up (for `LoadingScreenCap`) |
 | `src/config.cpp`, `log.cpp` | INI settings, session log |
 | `src/blend/frame.cpp` | per-frame timing of every blend: apply, then restore |
 | `src/blend/objects.cpp` | entity transforms (cars, props, lamps) |

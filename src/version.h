@@ -2,7 +2,7 @@
 
 #define MW_VERSION_MAJOR 1
 #define MW_VERSION_MINOR 0
-#define MW_VERSION_PATCH 0
+#define MW_VERSION_PATCH 1
 
 #define MW_STR2(x) #x
 #define MW_STR(x) MW_STR2(x)
